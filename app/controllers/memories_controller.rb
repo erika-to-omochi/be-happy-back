@@ -1,6 +1,11 @@
 require 'openai'
 
 class MemoriesController < ApplicationController
+  def index
+    @memories = Memory.all
+    render json: @memories
+  end
+
   def create
     @memory = Memory.new(memory_params)
     if @memory.save
