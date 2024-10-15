@@ -1,11 +1,13 @@
 require 'openai'
 
 class MemoriesController < ApplicationController
+  # GET /memories
   def index
     @memories = Memory.all
     render json: @memories
   end
 
+  # POST /memories
   def create
     @memory = Memory.new(memory_params)
     if @memory.save
@@ -15,7 +17,7 @@ class MemoriesController < ApplicationController
     end
   end
 
-  # openAIを使ったポジティブ変換
+  # POST /memories/:id/transform
   def transform
     @memory = Memory.find(params[:id])
     client = OpenAI::Client.new(access_token: ENV['OPENAI_API_KEY'])
@@ -42,6 +44,11 @@ class MemoriesController < ApplicationController
     else
       render json: { error: 'OpenAI APIの呼び出しに失敗しました。' }, status: :internal_server_error
     end
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'Memory not found' }, status: :not_found
+  rescue StandardError => e
+    Rails.logger.error "Transform Error: #{e.message}"
+    render json: { error: 'Internal Server Error' }, status: :internal_server_error
   end
 
   private
