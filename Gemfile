@@ -47,3 +47,5 @@ group :development do
 end
 
 gem "ruby-openai", "~> 3.0"
+
+gem "dotenv-rails", groups: [:development, :test]
