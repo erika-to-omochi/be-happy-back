@@ -49,3 +49,8 @@ end
 gem "ruby-openai", "~> 3.0"
 
 gem "dotenv-rails", groups: [:development, :test]
+
+gem "devise"
+gem "devise-jwt"
+
+gem "rails-i18n", "~> 7.0"
