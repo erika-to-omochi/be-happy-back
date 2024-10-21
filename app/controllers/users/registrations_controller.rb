@@ -1,13 +1,20 @@
-class Users::RegistrationsController < Devise::RegistrationsController
+class Api::Users::RegistrationsController < Devise::RegistrationsController
   respond_to :json
+
+  def create
+    user = User.new(user_params)
+
+    if user.save
+      token = JWT.encode({ user_id: user.id }, ENV['JWT_SECRET_KEY'], 'HS256')
+      render json: { message: 'Signed up successfully.', user: user, token: token }, status: :created
+    else
+      render json: { message: "User couldn't be created successfully.", errors: user.errors.full_messages }, status: :unprocessable_entity
+    end
+  end
 
   private
 
-  def respond_with(resource, _opts = {})
-    if resource.persisted?
-      render json: { message: 'Signed up successfully.', user: resource }, status: :ok
-    else
-      render json: { message: "User couldn't be created successfully.", errors: resource.errors.full_messages }, status: :unprocessable_entity
-    end
+  def user_params
+    params.require(:user).permit(:email, :password, :password_confirmation)
   end
 end

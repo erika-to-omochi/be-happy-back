@@ -20,13 +20,7 @@ Devise.setup do |config|
 
   # JWT の設定
   config.jwt do |jwt|
-    jwt.secret = ENV['DEVISE_JWT_SECRET_KEY'] || 'your_jwt_secret_key'
-    jwt.dispatch_requests = [
-      ['POST', %r{^/users/sign_in$}]
-    ]
-    jwt.revocation_requests = [
-      ['DELETE', %r{^/users/sign_out$}]
-    ]
-    jwt.expiration_time = 1.day.to_i  # トークンの有効期限を1日に設定
+    jwt.secret = ENV['DEVISE_JWT_SECRET_KEY']
+    jwt.algorithm = 'HS256'
   end
 end
