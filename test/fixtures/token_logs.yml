@@ -1,0 +1,11 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  user: one
+  token: MyString
+  issued_at: 2024-10-20 10:26:28
+
+two:
+  user: two
+  token: MyString
+  issued_at: 2024-10-20 10:26:28
