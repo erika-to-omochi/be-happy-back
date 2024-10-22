@@ -10,13 +10,13 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_10_20_102628) do
+ActiveRecord::Schema[7.0].define(version: 2024_10_22_011524) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
   create_table "jwt_denylists", force: :cascade do |t|
-    t.string "jti"
-    t.datetime "exp"
+    t.string "jti", null: false
+    t.datetime "exp", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["jti"], name: "index_jwt_denylists_on_jti"
@@ -24,9 +24,12 @@ ActiveRecord::Schema[7.0].define(version: 2024_10_20_102628) do
 
   create_table "memories", force: :cascade do |t|
     t.text "content"
+    t.bigint "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "transformed_content"
+    t.boolean "is_secret"
+    t.index ["user_id"], name: "index_memories_on_user_id"
   end
 
   create_table "token_logs", force: :cascade do |t|
@@ -46,9 +49,12 @@ ActiveRecord::Schema[7.0].define(version: 2024_10_20_102628) do
     t.datetime "remember_created_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "jti", default: "", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["jti"], name: "index_users_on_jti", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
+  add_foreign_key "memories", "users"
   add_foreign_key "token_logs", "users"
 end

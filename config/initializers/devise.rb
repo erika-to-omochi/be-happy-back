@@ -22,5 +22,13 @@ Devise.setup do |config|
   config.jwt do |jwt|
     jwt.secret = ENV['DEVISE_JWT_SECRET_KEY']
     jwt.algorithm = 'HS256'
+    jwt.dispatch_requests = [['POST', %r{^/api/login$}]]
+    jwt.revocation_requests = [['DELETE', %r{^/api/logout$}]]
+    jwt.expiration_time = 24.hours.to_i
+    jwt.request_formats = { user: [:json] }
+  end
+
+  config.warden do |manager|
+    manager.failure_app = CustomFailure
   end
 end
