@@ -2,9 +2,21 @@ require 'openai'
 
 module Api
   class MemoriesController < ApplicationController
+    before_action :authenticate_user!
+
+    def my_page
+      # 現在ログインしているユーザーに紐づくメモリーを取得
+      if current_user
+        memories = current_user.memories.order(created_at: :desc) # メモリーを作成日時の降順で取得
+        render json: memories, status: :ok
+      else
+        render json: { error: 'Unauthorized' }, status: :unauthorized
+      end
+    end
+
     # GET /api/memories
     def index
-      @memories = Memory.all
+      @memories = Memory.all.order(created_at: :desc) # 作成日時で並び替え
       render json: @memories.map { |memory|
         {
           id: memory.id,
@@ -16,12 +28,12 @@ module Api
           createdAt: memory.created_at,
           updatedAt: memory.updated_at
         }
-      }
+      }, status: :ok
     end
 
     # POST /api/memories
     def create
-      @memory = Memory.new(memory_params)
+      @memory = current_user.memories.build(memory_params)
       if @memory.save
         render json: {
           id: @memory.id,

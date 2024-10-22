@@ -9,12 +9,17 @@ Rails.application.routes.draw do
       post 'login', to: 'users/sessions#create'
       post 'signup', to: 'users/registrations#create'
       delete 'logout', to: 'users/sessions#destroy'
-      resources :memories do
-        member do
-          post 'transform'
-        end
-      end
-      match '*path', to: 'application#options', via: [:options]
     end
+
+    resources :memories do
+      member do
+        post 'transform'
+      end
+      collection do
+        get 'my_page', to: 'memories#my_page'
+      end
+    end
+
+    match '*path', to: 'application#options', via: [:options]
   end
 end
