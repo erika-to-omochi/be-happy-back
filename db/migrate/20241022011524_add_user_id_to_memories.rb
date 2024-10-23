@@ -1,8 +1,12 @@
 class AddUserIdToMemories < ActiveRecord::Migration[7.0]
   def change
-    unless column_exists?(:memories, :user_id)
-      Memory.where(user_id: nil).update_all(user_id: 1)
-      add_reference :memories, :user, null: false, foreign_key: true
+    add_reference :memories, :user, null: true, foreign_key: true
+
+    reversible do |dir|
+      dir.up do
+        Memory.where(user_id: nil).update_all(user_id: 1)
+        change_column_null :memories, :user_id, false
+      end
     end
   end
 end
