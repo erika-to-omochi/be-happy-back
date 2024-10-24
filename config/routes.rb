@@ -9,6 +9,7 @@ Rails.application.routes.draw do
       post 'login', to: 'users/sessions#create'
       post 'signup', to: 'users/registrations#create'
       delete 'logout', to: 'users/sessions#destroy'
+      post 'guest_sessions', to: 'guest_sessions#create'
     end
 
     resources :memories do

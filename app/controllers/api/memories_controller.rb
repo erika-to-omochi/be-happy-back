@@ -12,7 +12,7 @@ module Api
     end
 
     def index
-      @memories = Memory.includes(:user).order(created_at: :desc) # userも一緒にロード
+      @memories = Memory.includes(:user).order(created_at: :desc)
       render json: @memories.map { |memory|
         {
           id: memory.id,
@@ -22,7 +22,7 @@ module Api
             createdAt: memory.created_at
           },
           user: {
-            name: memory.user&.name || memory.name || 'ゲスト' # ログインしている場合はユーザー名、いない場合は手動で入力された名前か「ゲスト」
+            name: memory.user&.name || memory.name || 'ゲスト'
           },
           createdAt: memory.created_at,
           updatedAt: memory.updated_at
@@ -32,14 +32,14 @@ module Api
 
     def create
       Rails.logger.info "Current user: #{current_user.inspect}"
-      name = current_user&.name || memory_params[:name] || 'ゲスト'
-
-      if current_user
-        @memory = current_user.memories.build(memory_params) # 認証済みユーザー
+      name = current_user.is_a?(User) ? current_user.name : memory_params[:name] || 'ゲスト'
+      if current_user.is_a?(User)
+        # 認証済みユーザーの場合は user_id を使用
+        @memory = current_user.memories.build(memory_params)
       else
-        @memory = Memory.new(memory_params.merge(name: name)) # ゲストユーザーの場合
+        # ゲストユーザーの場合は guest_user_id を使用
+        @memory = Memory.new(memory_params.merge(name: name, guest_user_id: current_user.id))
       end
-
       if @memory.save
         render json: {
           id: @memory.id,
@@ -49,7 +49,7 @@ module Api
             createdAt: @memory.created_at
           },
           user: {
-            name: name # ユーザーがいない場合は手動で入力された名前を使用
+            name: name
           },
           createdAt: @memory.created_at,
           updatedAt: @memory.updated_at
@@ -61,9 +61,32 @@ module Api
 
     # POST /api/memories/:id/transform
     def transform
-      @memory = Memory.find(params[:id])
+      Rails.logger.info("Received params: #{params.inspect}")
+      Rails.logger.info("Current user: #{current_user.inspect}")
+
+      # ユーザーが認証済みかどうかに基づいてメモリーを取得
+      @memory = if current_user.is_a?(User)
+        Memory.find_by(id: params[:id], user_id: current_user.id)
+      else
+        Memory.find_by(id: params[:id], guest_user_id: current_user.id)
+      end
+
+      if @memory.nil?
+        Rails.logger.error("Memory not found for ID: #{params[:id]}, User: #{current_user.inspect}")
+        render json: { error: '他の人の記憶は変換できません' }, status: :forbidden
+        return
+      end
+
+      # OpenAI API を使って変換処理を行う
       client = OpenAI::Client.new(access_token: ENV['OPENAI_API_KEY'])
 
+      # transformed_content が既に存在するか確認
+      if @memory.transformed_content.present?
+        render json: { error: 'Transformed content is missing' }, status: :unprocessable_entity
+        return
+      end
+
+      # OpenAI API 呼び出し
       response = client.chat(
         parameters: {
           model: "gpt-3.5-turbo",
@@ -76,11 +99,13 @@ module Api
         }
       )
 
-      Rails.logger.info "OpenAI Response: #{response.inspect}" # デバッグ用ログ
+      Rails.logger.info "OpenAI Response: #{response.inspect}"
 
       if response['choices'] && response['choices'][0]['message']['content']
+        # 変換されたコンテンツを保存
         @memory.transformed_content = response['choices'][0]['message']['content']
-        Rails.logger.info "Transformed Content: #{@memory.transformed_content}" # デバッグ用ログ
+        Rails.logger.info "Transformed Content: #{@memory.transformed_content}"
+
         if @memory.save
           render json: {
             id: @memory.id,
@@ -90,7 +115,7 @@ module Api
               createdAt: @memory.created_at
             },
             user: {
-              name: @memory.user&.name || @memory.name || 'ゲスト' # ユーザーがいない場合は「ゲスト」または手動で入力された名前
+              name: @memory.user&.name || @memory.name || 'ゲスト'
             },
             createdAt: @memory.created_at,
             updatedAt: @memory.updated_at
