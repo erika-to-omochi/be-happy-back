@@ -10,7 +10,7 @@ module Api
           exp = 24.hours.from_now.to_i # トークンに有効期限を設定
           token = JWT.encode({ user_id: user.id, exp: exp }, ENV['DEVISE_JWT_SECRET_KEY'], 'HS256')
           response.set_header('Authorization', "Bearer #{token}") # トークンをレスポンスのヘッダーにセット
-          render json: { token: token, user: user }, status: :ok # レスポンスボディにユーザー情報とトークンを含めて返す
+          render json: { token: token, user: { email: user.email, name: user.name } }, status: :ok
         else
           render json: { error: 'Invalid email or password' }, status: :unauthorized
         end

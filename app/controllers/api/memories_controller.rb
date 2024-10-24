@@ -1,20 +1,18 @@
 module Api
   class MemoriesController < Api::ApplicationController
-    before_action :authenticate_user!, except: [:index] # index以外で認証を要求
-    skip_before_action :authenticate_user!, only: [:index]  # indexアクションでのみ認証をスキップ
+    before_action :authenticate_user!, except: [:index]
 
     def my_page
       if current_user
-        memories = current_user.memories.order(created_at: :desc)
-        render json: memories, status: :ok
+        memories = current_user.memories.includes(:user).order(created_at: :desc)
+        render json: memories.to_json(include: :user), status: :ok
       else
         render json: { error: 'Unauthorized' }, status: :unauthorized
       end
     end
 
-    # GET /api/memories
     def index
-      @memories = Memory.all.order(created_at: :desc)
+      @memories = Memory.includes(:user).order(created_at: :desc) # userも一緒にロード
       render json: @memories.map { |memory|
         {
           id: memory.id,
@@ -23,15 +21,25 @@ module Api
             transformedContent: memory.transformed_content,
             createdAt: memory.created_at
           },
+          user: {
+            name: memory.user&.name || memory.name || 'ゲスト' # ログインしている場合はユーザー名、いない場合は手動で入力された名前か「ゲスト」
+          },
           createdAt: memory.created_at,
           updatedAt: memory.updated_at
         }
       }, status: :ok
     end
 
-    # POST /api/memories
     def create
-      @memory = current_user.memories.build(memory_params)
+      Rails.logger.info "Current user: #{current_user.inspect}"
+      name = current_user&.name || memory_params[:name] || 'ゲスト'
+
+      if current_user
+        @memory = current_user.memories.build(memory_params) # 認証済みユーザー
+      else
+        @memory = Memory.new(memory_params.merge(name: name)) # ゲストユーザーの場合
+      end
+
       if @memory.save
         render json: {
           id: @memory.id,
@@ -39,6 +47,9 @@ module Api
             inputContent: @memory.content,
             transformedContent: @memory.transformed_content,
             createdAt: @memory.created_at
+          },
+          user: {
+            name: name # ユーザーがいない場合は手動で入力された名前を使用
           },
           createdAt: @memory.created_at,
           updatedAt: @memory.updated_at
@@ -78,6 +89,9 @@ module Api
               transformedContent: @memory.transformed_content,
               createdAt: @memory.created_at
             },
+            user: {
+              name: @memory.user&.name || @memory.name || 'ゲスト' # ユーザーがいない場合は「ゲスト」または手動で入力された名前
+            },
             createdAt: @memory.created_at,
             updatedAt: @memory.updated_at
           }, status: :ok
@@ -95,11 +109,10 @@ module Api
       render json: { error: 'Internal Server Error' }, status: :internal_server_error
     end
 
-
     private
 
     def memory_params
-      params.require(:memory).permit(:content)
+      params.require(:memory).permit(:content, :name, :user_id)
     end
   end
 end
