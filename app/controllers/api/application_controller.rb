@@ -3,8 +3,8 @@ module Api
     include ActionController::MimeResponds
     respond_to :json
     skip_before_action :verify_authenticity_token, raise: false
-
     before_action :authenticate_user!
+    rescue_from JWT::ExpiredSignature, with: :handle_expired_token
 
     def options
       head :ok
@@ -19,13 +19,14 @@ module Api
       begin
         decoded_token = JwtService.decode(token)
         Rails.logger.info "Decoded Token: #{decoded_token.inspect}"
-        # guest_user_id または user_id に応じて検索
         if decoded_token['user_id']
           @current_user = User.find_by(id: decoded_token['user_id'])
         elsif decoded_token['guest_user_id']
           @current_user = GuestUser.find_by(id: decoded_token['guest_user_id'])
         end
         return render json: { error: 'Unauthorized' }, status: :unauthorized unless @current_user
+      rescue JWT::ExpiredSignature
+        render json: { error: 'Token has expired' }, status: :unauthorized
       rescue JWT::DecodeError => e
         Rails.logger.error "JWT Decode Error: #{e.message}"
         render json: { error: "Invalid token: #{e.message}" }, status: :unauthorized
@@ -37,6 +38,10 @@ module Api
 
     def current_user
       @current_user
+    end
+
+    def handle_expired_token
+      render json: { error: 'Token has expired' }, status: :unauthorized
     end
   end
 end

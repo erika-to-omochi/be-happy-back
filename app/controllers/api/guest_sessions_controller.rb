@@ -8,13 +8,19 @@ module Api
 
       # トークン生成
       token = JWT.encode(
-        { guest_user_id: guest_user.id, exp: 1.hour.from_now.to_i },
+        { guest_user_id: guest_user.id, exp: 3.days.from_now.to_i },
         ENV['DEVISE_JWT_SECRET_KEY'],
         'HS256'
       )
       render json: { token: token }, status: :created
     rescue StandardError => e
       render json: { error: e.message }, status: :unprocessable_entity
+    end
+
+    def logout
+      Rails.logger.info "ログアウトリクエストを受け取りました"
+      puts "ログアウトリクエストを受け取りました" # 標準出力確認用
+      render json: { message: 'Logged out successfully' }, status: :ok
     end
   end
 end
