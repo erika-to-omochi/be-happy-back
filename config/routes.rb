@@ -10,6 +10,7 @@ Rails.application.routes.draw do
       post 'signup', to: 'users/registrations#create'
       delete 'logout', to: 'users/sessions#destroy'
       post 'guest_sessions', to: 'guest_sessions#create'
+      delete 'guest_logout', to: 'guest_sessions#logout'
     end
 
     resources :memories do
